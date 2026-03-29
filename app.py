@@ -7,13 +7,12 @@ with natural language.
 import requests
 import streamlit as st
 
-from src.agent import create_agent, run_agent
-from src.config import LLM_PROVIDER, OLLAMA_MODEL, ANTHROPIC_MODEL
+from src.agent import spinup_agent, run_agent
+from src.config import LLM_PROVIDER, OLLAMA_MODEL, ANTHROPIC_MODEL, PROMETHEUS_URL
 
 # ── Page config ──────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Prometheus AI Agent",
-    page_icon="🔥",
     layout="wide",
 )
 
@@ -51,7 +50,7 @@ st.markdown(
 # ── Agent (shared across all sessions via cache_resource) ────────────
 @st.cache_resource(show_spinner="Initializing agent...")
 def get_agent():
-    return create_agent()
+    return spinup_agent()
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────
@@ -78,7 +77,7 @@ with st.sidebar:
     st.divider()
     st.header("Status")
     try:
-        r = requests.get("http://localhost:9090/api/v1/status/config", timeout=3)
+        r = requests.get(f"{PROMETHEUS_URL}/api/v1/status/config", timeout=3)
         if r.status_code == 200:
             st.success("Prometheus: Connected")
         else:

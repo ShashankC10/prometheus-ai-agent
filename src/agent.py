@@ -5,13 +5,13 @@ to query PromQL, detect anomalies, explore metrics, and
 read alerting rules.
 """
 
-from langchain_core.messages import SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 from src.config import (
     ANTHROPIC_API_KEY,
     ANTHROPIC_MODEL,
     LLM_PROVIDER,
+    OLLAMA_API_KEY,
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
 )
@@ -54,22 +54,24 @@ def _build_llm():
         return ChatOllama(
             model=OLLAMA_MODEL,
             base_url=OLLAMA_BASE_URL,
+            headers={"Authorization": f"Bearer {OLLAMA_API_KEY}"},
         )
     from langchain_anthropic import ChatAnthropic
     return ChatAnthropic(
-        model=ANTHROPIC_MODEL,
+        model_name=ANTHROPIC_MODEL,
         api_key=ANTHROPIC_API_KEY,
         temperature=0,
-        max_tokens=4096,
+        timeout=60,
+        stop=None,
     )
 
 
-def create_agent():
+def spinup_agent():
     """Create and return the LangChain ReAct agent."""
-    agent = create_react_agent(
+    agent = create_agent(
         model=_build_llm(),
         tools=ALL_TOOLS,
-        prompt=SYSTEM_PROMPT,
+        system_prompt=SYSTEM_PROMPT,
     )
     return agent
 

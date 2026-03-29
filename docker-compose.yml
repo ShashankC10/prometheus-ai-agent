@@ -39,9 +39,8 @@ services:
       - "8501:8501"
     env_file: .env
     environment:
-      # Override localhost URLs with Docker service names / host
+      # Override Prometheus URL to use Docker service name instead of localhost
       - PROMETHEUS_URL=http://prometheus:9090
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     depends_on:
       - prometheus
       - fake-app
