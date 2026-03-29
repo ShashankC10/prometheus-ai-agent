@@ -1,0 +1,33 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerting/alert_rules.yml:/etc/prometheus/alert_rules.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  # Synthetic app that exposes fake HTTP metrics for demo purposes
+  fake-app:
+    image: python:3.11-slim
+    container_name: fake-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/fake_metrics_app.py:/app/fake_metrics_app.py
+    command: >
+      bash -c "pip install prometheus-client flask --quiet &&
+               python /app/fake_metrics_app.py"
+    restart: unless-stopped

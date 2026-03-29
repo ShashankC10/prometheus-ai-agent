@@ -1,0 +1,29 @@
+# Environment
+.env
+
+# Python
+venv/
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Streamlit
+.streamlit/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prometheus data (if mounted locally)
+prometheus_data/
+CLAUDE.md
