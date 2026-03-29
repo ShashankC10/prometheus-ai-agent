@@ -41,7 +41,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Header ───────────────────────────────────────────────────────────
-st.markdown('<p class="main-header">🔥 Prometheus AI Agent</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">Prometheus AI Agent</p>', unsafe_allow_html=True)
 st.markdown(
     '<p class="sub-header">Ask questions about your infrastructure metrics in plain English</p>',
     unsafe_allow_html=True,
