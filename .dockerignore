@@ -1,0 +1,12 @@
+.env
+.venv/
+venv/
+**/__pycache__/
+*.pyc
+.git/
+.idea/
+.vscode/
+.streamlit/
+prometheus_data/
+CLAUDE.md
+README.md
