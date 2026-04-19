@@ -1,4 +1,4 @@
-# 🔥 Prometheus AI Agent
+# Prometheus AI Agent
 
 An LLM-powered infrastructure monitoring agent that queries Prometheus metrics, detects anomalies, and provides root-cause analysis in natural language. Built with LangChain, LangGraph, and Streamlit. Supports both Anthropic Claude and local models via Ollama.
 

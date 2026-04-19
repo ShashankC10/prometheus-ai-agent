@@ -31,3 +31,17 @@ services:
       bash -c "pip install prometheus-client flask --quiet &&
                python /app/fake_metrics_app.py"
     restart: unless-stopped
+
+  streamlit-app:
+    build: .
+    container_name: streamlit-app
+    ports:
+      - "8501:8501"
+    env_file: .env
+    environment:
+      # Override Prometheus URL to use Docker service name instead of localhost
+      - PROMETHEUS_URL=http://prometheus:9090
+    depends_on:
+      - prometheus
+      - fake-app
+    restart: unless-stopped
