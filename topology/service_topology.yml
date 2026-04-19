@@ -1,0 +1,75 @@
+# Service topology and dependency map.
+# Defines which services depend on which, and which Prometheus metrics
+# are the primary health indicators for each service.
+# Update this file as your infrastructure evolves.
+
+services:
+
+  - name: fake-app
+    description: Synthetic metrics application (Flask)
+    type: application
+    prometheus_job: fake-app
+    primary_metrics:
+      - http_requests_total
+      - http_request_duration_seconds
+    health_query: 'up{job="fake-app"}'
+    depends_on: []
+    depended_on_by: []
+    alert_rules:
+      - HighErrorRate
+      - HighLatency
+    typical_issues:
+      - high error rate when memory is exhausted
+      - latency spikes during anomaly injection windows
+
+  - name: prometheus
+    description: Prometheus metrics collection server
+    type: infrastructure
+    prometheus_job: prometheus
+    primary_metrics:
+      - prometheus_tsdb_head_samples_appended_total
+      - prometheus_rule_evaluation_duration_seconds
+      - up
+    health_query: 'up{job="prometheus"}'
+    depends_on: []
+    depended_on_by:
+      - fake-app
+      - node-exporter
+    alert_rules: []
+    typical_issues:
+      - TSDB compaction lag under high cardinality
+      - rule evaluation slower than scrape interval
+
+  - name: node-exporter
+    description: Node-level system metrics exporter
+    type: infrastructure
+    prometheus_job: node-exporter
+    primary_metrics:
+      - node_cpu_seconds_total
+      - node_memory_MemAvailable_bytes
+      - node_filesystem_avail_bytes
+      - node_network_transmit_bytes_total
+    health_query: 'up{job="node-exporter"}'
+    depends_on: []
+    depended_on_by:
+      - fake-app
+    alert_rules:
+      - HighCpuUsage
+      - HighMemoryUsage
+      - DiskSpaceLow
+    typical_issues:
+      - CPU saturation from application workload
+      - memory pressure causing OOM events
+      - disk filling from log accumulation
+
+metric_to_service:
+  http_requests_total: fake-app
+  http_request_duration_seconds: fake-app
+  node_cpu_seconds_total: node-exporter
+  node_memory_MemAvailable_bytes: node-exporter
+  node_memory_MemTotal_bytes: node-exporter
+  node_filesystem_avail_bytes: node-exporter
+  node_filesystem_size_bytes: node-exporter
+  node_network_transmit_bytes_total: node-exporter
+  node_network_receive_bytes_total: node-exporter
+  up: prometheus

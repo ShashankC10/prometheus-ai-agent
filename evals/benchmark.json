@@ -1,0 +1,182 @@
+[
+  {
+    "id": "q001",
+    "question": "What is the current HTTP request rate across all endpoints?",
+    "category": "metric_lookup",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["rate(http_requests_total", "irate(http_requests_total"],
+    "expected_issue_categories": [],
+    "notes": "Should use rate() over http_requests_total"
+  },
+  {
+    "id": "q002",
+    "question": "Are there any HTTP 5xx errors in the last 30 minutes?",
+    "category": "error_triage",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["http_requests_total{status=~\"5", "http_requests_total.*5xx"],
+    "expected_issue_categories": ["error_rate"],
+    "notes": "Should filter by status label for 5xx"
+  },
+  {
+    "id": "q003",
+    "question": "What is the p95 latency for the /api/search endpoint?",
+    "category": "latency_analysis",
+    "expected_metric_families": ["http_request_duration_seconds"],
+    "acceptable_promql_patterns": ["histogram_quantile(0.95", "histogram_quantile(0.9"],
+    "expected_issue_categories": [],
+    "notes": "Should use histogram_quantile on duration bucket"
+  },
+  {
+    "id": "q004",
+    "question": "What is the current CPU usage?",
+    "category": "resource_saturation",
+    "expected_metric_families": ["node_cpu_seconds_total"],
+    "acceptable_promql_patterns": ["node_cpu_seconds_total", "rate(node_cpu_seconds_total"],
+    "expected_issue_categories": [],
+    "notes": "Should compute CPU usage from node_cpu_seconds_total idle mode"
+  },
+  {
+    "id": "q005",
+    "question": "How much memory is being used?",
+    "category": "resource_saturation",
+    "expected_metric_families": ["node_memory_MemTotal_bytes", "node_memory_MemAvailable_bytes"],
+    "acceptable_promql_patterns": ["node_memory_Mem"],
+    "expected_issue_categories": [],
+    "notes": "Should compute used = total - available"
+  },
+  {
+    "id": "q006",
+    "question": "Are there any anomalies in HTTP error rates over the last hour?",
+    "category": "anomaly_investigation",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["http_requests_total"],
+    "expected_issue_categories": ["spike", "sustained_regression"],
+    "notes": "Should use anomaly_detection_tool, not just query"
+  },
+  {
+    "id": "q007",
+    "question": "Are any alerts currently firing?",
+    "category": "alert_explanation",
+    "expected_metric_families": [],
+    "acceptable_promql_patterns": [],
+    "expected_issue_categories": [],
+    "notes": "Should use alert_rules_tool with action=firing"
+  },
+  {
+    "id": "q008",
+    "question": "Explain all configured alert rules in plain language.",
+    "category": "alert_explanation",
+    "expected_metric_families": [],
+    "acceptable_promql_patterns": [],
+    "expected_issue_categories": [],
+    "notes": "Should use alert_rules_tool with action=list"
+  },
+  {
+    "id": "q009",
+    "question": "What services is Prometheus monitoring right now?",
+    "category": "metric_lookup",
+    "expected_metric_families": ["up"],
+    "acceptable_promql_patterns": ["up", "targets"],
+    "expected_issue_categories": [],
+    "notes": "Can use metric_explorer_tool targets or query 'up'"
+  },
+  {
+    "id": "q010",
+    "question": "Show me the top 5 endpoints by error rate.",
+    "category": "error_triage",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["http_requests_total", "topk(5"],
+    "expected_issue_categories": ["error_rate"],
+    "notes": "Should use topk() aggregation with status filter"
+  },
+  {
+    "id": "q011",
+    "question": "Is there a memory leak? Show memory usage trend over the last hour.",
+    "category": "anomaly_investigation",
+    "expected_metric_families": ["node_memory_MemAvailable_bytes"],
+    "acceptable_promql_patterns": ["node_memory_Mem"],
+    "expected_issue_categories": ["sustained_regression", "increasing_trend"],
+    "notes": "Should check trend direction and anomaly count"
+  },
+  {
+    "id": "q012",
+    "question": "What is the error rate for the /api/checkout endpoint?",
+    "category": "error_triage",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["http_requests_total.*checkout", "http_requests_total.*api/checkout"],
+    "expected_issue_categories": [],
+    "notes": "Should filter by endpoint label"
+  },
+  {
+    "id": "q013",
+    "question": "Correlate CPU, memory, and request latency to diagnose any issues.",
+    "category": "incident_investigation",
+    "expected_metric_families": ["node_cpu_seconds_total", "node_memory_MemAvailable_bytes", "http_request_duration_seconds"],
+    "acceptable_promql_patterns": ["node_cpu", "node_memory", "http_request_duration"],
+    "expected_issue_categories": [],
+    "notes": "Must query at least 3 different metric families"
+  },
+  {
+    "id": "q014",
+    "question": "Which Prometheus targets are currently down?",
+    "category": "metric_lookup",
+    "expected_metric_families": ["up"],
+    "acceptable_promql_patterns": ["up == 0", "up{", "targets"],
+    "expected_issue_categories": [],
+    "notes": "Should identify targets with health != up"
+  },
+  {
+    "id": "q015",
+    "question": "What is the request throughput in requests per second right now?",
+    "category": "metric_lookup",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["rate(http_requests_total", "sum(rate(http_requests_total"],
+    "expected_issue_categories": [],
+    "notes": "Should sum rate across all instances"
+  },
+  {
+    "id": "q016",
+    "question": "Are there any spikes in response time in the last 30 minutes?",
+    "category": "anomaly_investigation",
+    "expected_metric_families": ["http_request_duration_seconds"],
+    "acceptable_promql_patterns": ["http_request_duration_seconds"],
+    "expected_issue_categories": ["spike"],
+    "notes": "Should use anomaly_detection_tool"
+  },
+  {
+    "id": "q017",
+    "question": "What percentage of requests are resulting in errors?",
+    "category": "error_triage",
+    "expected_metric_families": ["http_requests_total"],
+    "acceptable_promql_patterns": ["http_requests_total.*5", "rate(http_requests_total"],
+    "expected_issue_categories": [],
+    "notes": "Should compute ratio of error requests to total"
+  },
+  {
+    "id": "q018",
+    "question": "Show me disk usage on all instances.",
+    "category": "resource_saturation",
+    "expected_metric_families": ["node_filesystem_avail_bytes", "node_filesystem_size_bytes"],
+    "acceptable_promql_patterns": ["node_filesystem"],
+    "expected_issue_categories": [],
+    "notes": "Should use node_filesystem metrics from node exporter"
+  },
+  {
+    "id": "q019",
+    "question": "Is there a CPU saturation issue? Analyze the last 2 hours.",
+    "category": "anomaly_investigation",
+    "expected_metric_families": ["node_cpu_seconds_total"],
+    "acceptable_promql_patterns": ["node_cpu_seconds_total"],
+    "expected_issue_categories": ["spike", "sustained_regression"],
+    "notes": "Should use anomaly_detection_tool with duration_minutes=120"
+  },
+  {
+    "id": "q020",
+    "question": "What is the average request latency per endpoint?",
+    "category": "latency_analysis",
+    "expected_metric_families": ["http_request_duration_seconds"],
+    "acceptable_promql_patterns": ["http_request_duration_seconds"],
+    "expected_issue_categories": [],
+    "notes": "Should use _sum/_count pattern or histogram_quantile"
+  }
+]
