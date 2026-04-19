@@ -27,3 +27,4 @@ Thumbs.db
 # Prometheus data (if mounted locally)
 prometheus_data/
 CLAUDE.md
+prometheus_agent_interview_safe_plan.md

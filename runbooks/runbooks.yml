@@ -1,0 +1,125 @@
+runbooks:
+
+  - alert: HighCpuUsage
+    title: High CPU Usage Runbook
+    severity: warning
+    threshold: "> 80% for 5 minutes"
+    likely_causes:
+      - Sudden traffic spike or load burst
+      - Runaway process or infinite loop
+      - Insufficient instance sizing for current workload
+      - Background job competing with request handling
+    diagnostic_steps:
+      - Check which process is consuming CPU with `top` or `ps aux`
+      - Query per-endpoint request rate to identify traffic bursts
+      - Check if error rate is also elevated (errors cause retries → more CPU)
+      - Look at CPU usage trend over the last hour for context
+    relevant_metrics:
+      - node_cpu_seconds_total
+      - http_requests_total
+      - process_cpu_seconds_total
+    remediation:
+      - Scale horizontally if the workload is distributable
+      - Identify and kill/restart any runaway processes
+      - Rate-limit or shed load if a traffic spike is the cause
+      - Profile the application if no external cause is found
+
+  - alert: HighMemoryUsage
+    title: High Memory Usage Runbook
+    severity: critical
+    threshold: "> 85% for 5 minutes"
+    likely_causes:
+      - Memory leak in application code
+      - Caching layer growing unbounded
+      - Large in-memory dataset or batch job
+      - Insufficient instance sizing
+    diagnostic_steps:
+      - Check memory usage trend — is it growing steadily (leak) or a sudden spike?
+      - Identify which process holds the most memory
+      - Check if GC (garbage collection) pressure is elevated
+      - Look for OOM kills in recent container restart counts
+    relevant_metrics:
+      - node_memory_MemAvailable_bytes
+      - node_memory_MemTotal_bytes
+      - container_memory_working_set_bytes
+    remediation:
+      - Restart the affected service if a leak is confirmed (short-term)
+      - Tune JVM/runtime heap limits if over-allocated
+      - Fix the memory leak in the application (long-term)
+      - Increase instance memory or add swap as a temporary measure
+
+  - alert: DiskSpaceLow
+    title: Low Disk Space Runbook
+    severity: critical
+    threshold: "> 90% full for 10 minutes"
+    likely_causes:
+      - Log files growing without rotation
+      - Large coredumps accumulating
+      - Database or cache not pruning old data
+      - Application writing temporary files that are not cleaned up
+    diagnostic_steps:
+      - Run `df -h` to confirm affected mount points
+      - Run `du -sh /*` to find the largest directories
+      - Check log rotation configuration (`/etc/logrotate.d/`)
+      - Look for coredump files in `/var/crash` or `/tmp`
+    relevant_metrics:
+      - node_filesystem_avail_bytes
+      - node_filesystem_size_bytes
+    remediation:
+      - Delete or rotate old log files immediately
+      - Remove coredumps or move to cold storage
+      - Increase disk size or add a volume
+      - Configure log rotation and automatic cleanup
+
+  - alert: HighErrorRate
+    title: High HTTP Error Rate Runbook
+    severity: warning
+    threshold: "> 5% of requests return 5xx for 2 minutes"
+    likely_causes:
+      - Downstream service dependency failing
+      - Database connection pool exhausted
+      - Code deployment introduced a regression
+      - Resource saturation (CPU/memory) causing request failures
+    diagnostic_steps:
+      - Check which endpoints are returning the most 5xx errors
+      - Look at error rate trend — did it spike at a specific time (correlate with deployments)?
+      - Check if downstream services (database, cache, APIs) are healthy
+      - Inspect application logs for exception stack traces
+    relevant_metrics:
+      - http_requests_total
+      - http_request_duration_seconds
+      - node_cpu_seconds_total
+      - node_memory_MemAvailable_bytes
+    remediation:
+      - Roll back recent deployment if error rate spiked after a release
+      - Scale up if resource saturation is the root cause
+      - Fix or circuit-break the failing downstream dependency
+      - Increase database/connection pool limits if exhaustion is the cause
+
+  - alert: HighLatency
+    title: High Request Latency Runbook
+    severity: warning
+    threshold: "p95 latency > 1 second for 5 minutes"
+    likely_causes:
+      - Slow database queries or N+1 query patterns
+      - External API dependency with increased response time
+      - CPU or memory saturation increasing processing time
+      - Network congestion or increased packet loss
+      - Lock contention in database or application layer
+    diagnostic_steps:
+      - Identify which endpoints have the highest p95/p99 latency
+      - Check database query latency — are slow queries present?
+      - Correlate with CPU and memory metrics (is the host saturated?)
+      - Check if error rate is also elevated (slow retries inflate latency)
+      - Look at the request rate — has throughput increased?
+    relevant_metrics:
+      - http_request_duration_seconds
+      - node_cpu_seconds_total
+      - node_memory_MemAvailable_bytes
+      - http_requests_total
+    remediation:
+      - Add indexes for slow database queries
+      - Implement caching to reduce downstream dependency calls
+      - Scale horizontally if the host is saturated
+      - Set and enforce timeouts on external API calls
+      - Enable connection pooling if not already in place

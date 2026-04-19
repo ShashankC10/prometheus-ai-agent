@@ -9,6 +9,7 @@ import requests
 from langchain_core.tools import tool
 
 from src import prom_api
+from src.tools.promql_validator import enforce_safe_params
 
 
 @tool
@@ -38,11 +39,13 @@ def promql_query_tool(
         JSON string with query results.
     """
     try:
+        safe_duration, safe_step, _ = enforce_safe_params(duration_minutes, step)
+
         if query_type == "range":
             data = prom_api.query_range(
                 promql,
-                *_range_bounds(duration_minutes),
-                step,
+                *_range_bounds(safe_duration),
+                safe_step,
             )
         else:
             data = prom_api.query_instant(promql)
