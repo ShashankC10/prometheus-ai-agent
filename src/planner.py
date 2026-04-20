@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 from typing import Annotated, Literal, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
@@ -40,10 +40,7 @@ from src.tools.promql_query import promql_query_tool
 from src.tools.promql_validator import promql_validator_tool
 from src.tools.anomaly_detection import anomaly_detection_tool
 from src.tools.alert_rules import alert_rules_tool
-from src.tools.metric_explorer import metric_explorer_tool
 from src.tools.incident_packs import incident_pack_tool, PACK_DEFINITIONS
-from src.tools.runbook import runbook_tool
-from src.tools.topology import topology_tool
 from src.structured_output import build_structured_result
 
 QUESTION_CATEGORIES = Literal[
@@ -70,8 +67,6 @@ class AgentState(TypedDict):
     anomalies_found: list[dict]
     alert_context: dict | None
     incident_pack_results: list[dict]
-    runbook_context: dict | None
-    topology_context: dict | None
     tool_trace: list[str]
     final_answer: str | None
     structured_result: dict | None
@@ -221,7 +216,6 @@ def query_node(state: AgentState) -> AgentState:
         step = q.get("step", "60s")
         purpose = q.get("purpose", "")
 
-        # Validate first
         val_json = promql_validator_tool.invoke(
             {"promql": promql, "duration_minutes": duration, "step": step}
         )
@@ -257,13 +251,11 @@ def query_node(state: AgentState) -> AgentState:
 
 # ── Node: incident pack ───────────────────────────────────────────────
 
-# Map question categories to the most relevant incident pack
 _CATEGORY_TO_PACK = {
-    "high_error_rate": "high_error_rate",
     "error_triage": "high_error_rate",
     "latency_analysis": "high_latency",
     "resource_saturation": "resource_saturation",
-    "incident_investigation": None,  # pick dynamically
+    "incident_investigation": None,
 }
 
 _PACK_KEYWORDS = {
@@ -299,7 +291,6 @@ def incident_pack_node(state: AgentState) -> AgentState:
         f"incident_pack({pack_name}) → {result.get('signals_succeeded', 0)}/{result.get('signals_total', 0)} signals"
     )
 
-    # Merge pack signal results into queries_run so synthesiser sees them
     pack_queries = []
     for sig in result.get("results", []):
         if sig["status"] == "success" and sig["result"]:
@@ -372,90 +363,6 @@ def alert_node(state: AgentState) -> AgentState:
     return {**state, "alert_context": alert_context, "tool_trace": trace}
 
 
-# ── Node: runbook grounding ───────────────────────────────────────────
-
-def runbook_node(state: AgentState) -> AgentState:
-    """Fetch relevant runbooks based on firing alerts or question category."""
-    trace = state["tool_trace"][:]
-    runbook_context: dict = {}
-
-    # If alerts are firing, fetch runbooks for each
-    firing = []
-    if state["alert_context"]:
-        firing = state["alert_context"].get("firing", {}).get("firing", [])
-
-    fetched = []
-    for alert in firing[:3]:
-        alert_name = alert.get("alert_name", "")
-        if alert_name:
-            result_json = runbook_tool.invoke({"action": "get", "query": alert_name})
-            result = json.loads(result_json)
-            if "runbooks" in result:
-                fetched.extend(result["runbooks"])
-
-    # If no firing alerts, try to match by category/question keyword
-    if not fetched:
-        keyword_map = {
-            "error_triage": "error rate",
-            "latency_analysis": "latency",
-            "resource_saturation": "cpu memory disk",
-            "anomaly_investigation": "",
-            "incident_investigation": "",
-        }
-        keyword = keyword_map.get(state["category"] or "", "")
-        if keyword:
-            for kw in keyword.split():
-                result_json = runbook_tool.invoke({"action": "get", "query": kw})
-                result = json.loads(result_json)
-                for rb in result.get("runbooks", []):
-                    if rb not in fetched:
-                        fetched.append(rb)
-
-    if fetched:
-        runbook_context = {"runbooks": fetched}
-        trace.append(f"runbook(get) → {len(fetched)} runbook(s) loaded")
-
-    return {**state, "runbook_context": runbook_context, "tool_trace": trace}
-
-
-# ── Node: topology context ────────────────────────────────────────────
-
-def topology_node(state: AgentState) -> AgentState:
-    """Enrich investigation with service dependency context."""
-    trace = state["tool_trace"][:]
-    topology_context: dict = {}
-
-    # Map discovered metrics to owning services
-    services_involved: set[str] = set()
-    for metric in state["discovered_metrics"][:5]:
-        # Strip PromQL functions to get bare metric name
-        import re
-        bare = re.findall(r"\b([a-z_][a-z0-9_]{4,})\b", metric)
-        for name in bare:
-            result_json = topology_tool.invoke({"action": "metric_owner", "metric_name": name})
-            result = json.loads(result_json)
-            owner = result.get("owner_service")
-            if owner:
-                services_involved.add(owner)
-
-    # Get dependency info for each involved service
-    service_details = []
-    for svc in services_involved:
-        result_json = topology_tool.invoke({"action": "dependencies", "service_name": svc})
-        result = json.loads(result_json)
-        if "service" in result:
-            service_details.append(result)
-
-    if service_details:
-        topology_context = {
-            "services_involved": list(services_involved),
-            "dependencies": service_details,
-        }
-        trace.append(f"topology → {len(services_involved)} service(s) identified")
-
-    return {**state, "topology_context": topology_context, "tool_trace": trace}
-
-
 # ── Node: synthesise answer ───────────────────────────────────────────
 
 _SYNTHESISE_PROMPT = """You are an expert SRE. Synthesize the investigation evidence below
@@ -464,8 +371,6 @@ into a clear, concise answer for the user. Include:
 - Exact PromQL queries used (so the user can reproduce)
 - Evidence summary (what the data shows)
 - Any anomalies detected
-- If runbooks are available, include the relevant diagnostic steps and remediation actions
-- If topology context is available, mention which services are affected and their dependencies
 - Recommended actions if issues are found
 
 Investigation evidence:
@@ -474,8 +379,6 @@ Discovered metrics: {metrics}
 Queries run: {queries}
 Anomalies: {anomalies}
 Alert context: {alerts}
-Runbook context: {runbooks}
-Service topology: {topology}
 Tool trace: {trace}
 
 User question: {question}"""
@@ -498,8 +401,6 @@ def synthesise_node(state: AgentState) -> AgentState:
         queries=json.dumps(state["queries_run"], default=str),
         anomalies=json.dumps(state["anomalies_found"], default=str),
         alerts=json.dumps(state["alert_context"], default=str),
-        runbooks=json.dumps(state.get("runbook_context"), default=str),
-        topology=json.dumps(state.get("topology_context"), default=str),
         trace=json.dumps(state["tool_trace"]),
         question=state["question"],
     )
@@ -526,8 +427,6 @@ def build_graph() -> StateGraph:
     g.add_node("incident_pack", incident_pack_node)
     g.add_node("anomaly", anomaly_node)
     g.add_node("alert", alert_node)
-    g.add_node("runbook", runbook_node)
-    g.add_node("topology", topology_node)
     g.add_node("synthesise", synthesise_node)
 
     g.set_entry_point("classify")
@@ -536,9 +435,7 @@ def build_graph() -> StateGraph:
     g.add_edge("query", "incident_pack")
     g.add_edge("incident_pack", "anomaly")
     g.add_edge("anomaly", "alert")
-    g.add_edge("alert", "runbook")
-    g.add_edge("runbook", "topology")
-    g.add_edge("topology", "synthesise")
+    g.add_edge("alert", "synthesise")
     g.add_edge("synthesise", END)
 
     return g.compile()
@@ -576,8 +473,6 @@ def run_planner(
         "anomalies_found": [],
         "alert_context": None,
         "incident_pack_results": [],
-        "runbook_context": None,
-        "topology_context": None,
         "tool_trace": [],
         "final_answer": None,
         "structured_result": None,

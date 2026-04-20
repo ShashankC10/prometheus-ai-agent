@@ -17,14 +17,17 @@ The agent translates your questions into PromQL, fetches data from Prometheus, r
 
 ```
 ┌──────────────┐     ┌───────────────────────────────────────────┐
-│  Streamlit   │     │          LangChain ReAct Agent            │
+│  Streamlit   │     │          LangGraph ReAct Agent            │
 │     UI       │────▶│  (Claude or Ollama as reasoning engine)   │
 └──────────────┘     │                                           │
                      │  Tools:                                   │
-                     │  ├─ PromQL Query    → Prometheus HTTP API │
-                     │  ├─ Anomaly Detect  → Z-score analysis    │
-                     │  ├─ Metric Explorer → Discover metrics    │
-                     │  └─ Alert Rules     → Parse & explain     │
+                     │  ├─ Metric Catalog   → Discover metrics   │
+                     │  ├─ PromQL Validator → Validate queries   │
+                     │  ├─ PromQL Query     → Prometheus API     │
+                     │  ├─ Anomaly Detect   → MAD + z-score      │
+                     │  ├─ Incident Packs   → Multi-signal       │
+                     │  ├─ Metric Explorer  → Targets & labels   │
+                     │  └─ Alert Rules      → Parse & explain    │
                      └───────────────────────────────────────────┘
                                       │
                      ┌────────────────▼────────────────┐
@@ -33,6 +36,43 @@ The agent translates your questions into PromQL, fetches data from Prometheus, r
                      │  └─ fake-app (HTTP metrics)       │
                      └───────────────────────────────────┘
 ```
+
+## Evaluation Results
+
+Benchmark: 20 questions across 7 categories, run against a live Prometheus instance (524 metrics, node-exporter + fake HTTP app).
+
+| Metric | Result |
+|--------|--------|
+| Total cases | 20 |
+| Errors | 0 |
+| PASS rate | 10 / 20 (50%) |
+| Avg metric family coverage | **97%** |
+| PromQL execution success rate | **90%** |
+
+**By category:**
+
+| Category | Cases | Coverage | Exec Rate |
+|----------|-------|----------|-----------|
+| metric_lookup | 4 | 100% | 100% |
+| alert_explanation | 2 | 100% | — |
+| anomaly_investigation | 4 | 100% | 83% |
+| error_triage | 4 | 100% | 100% |
+| latency_analysis | 2 | 100% | 100% |
+| resource_saturation | 3 | 100% | 67% |
+| incident_investigation | 1 | 100% | 100% |
+
+WARN cases are flagged by the eval harness for label-name tokens (`status`, `instance`) appearing in PromQL expressions — these are valid label selectors, not hallucinations. All queries that executed against Prometheus returned a `success` status.
+
+Run evals yourself:
+```bash
+python evals/run_evals.py
+# Filter by category:
+python evals/run_evals.py --category anomaly_investigation
+# Run specific cases:
+python evals/run_evals.py --ids q001,q006,q013
+```
+
+Results are saved to `evals/results.json`.
 
 ## Quick Start
 
@@ -91,8 +131,9 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 **Option B — Ollama (local or cloud-hosted)**
 ```env
 LLM_PROVIDER=ollama
-OLLAMA_MODEL=qwen3.5:397b-cloud
+OLLAMA_MODEL=qwen3:30b
 OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_API_KEY=your-ollama-key   # required for cloud endpoints
 ```
 
 Any model served by Ollama with `tools` capability works. Larger models produce more accurate PromQL and better multi-step reasoning.
@@ -115,28 +156,38 @@ prometheus-ai-agent/
 │   └── alert_rules.yml          # Sample alerting rules
 ├── src/
 │   ├── config.py                # Environment variable loading & validation
-│   ├── agent.py                 # LangChain ReAct agent + LLM provider selection
+│   ├── agent.py                 # LangGraph ReAct agent + LLM provider selection
+│   ├── planner.py               # Multi-step StateGraph investigation planner
 │   ├── prom_api.py              # Shared Prometheus HTTP client
+│   ├── structured_output.py     # Pydantic output schemas
 │   ├── fake_metrics_app.py      # Synthetic metrics generator (Flask)
 │   └── tools/
-│       ├── __init__.py
 │       ├── promql_query.py      # Execute PromQL queries
-│       ├── anomaly_detection.py # Statistical anomaly detection
+│       ├── anomaly_detection.py # Multi-method anomaly detection (MAD + z-score)
+│       ├── metric_catalog.py    # Search live Prometheus metadata
+│       ├── promql_validator.py  # Validate PromQL before execution
+│       ├── incident_packs.py    # Multi-signal investigation packs
 │       ├── metric_explorer.py   # Discover metrics and targets
 │       └── alert_rules.py       # Read and explain alert rules
+├── evals/
+│   ├── benchmark.json           # 20-question benchmark suite
+│   ├── run_evals.py             # Eval runner + scoring
+│   └── results.json             # Latest eval output
 ├── app.py                       # Streamlit UI
 ├── requirements.txt
-├── .env.example
-└── README.md
+└── .env.example
 ```
 
 ## Agent Tools
 
 | Tool | Purpose |
 |------|---------|
+| `metric_catalog_tool` | Search live Prometheus metadata to find real metric names before writing PromQL |
+| `promql_validator_tool` | Validate a PromQL expression before executing it |
 | `promql_query_tool` | Execute instant or range PromQL queries against the Prometheus API |
-| `anomaly_detection_tool` | Fetch metric ranges and detect statistical anomalies via z-score |
-| `metric_explorer_tool` | List available metrics, labels, and scrape targets |
+| `anomaly_detection_tool` | Fetch metric ranges and detect anomalies via rolling MAD + z-score + change-point |
+| `incident_pack_tool` | Run a multi-signal investigation pack (high_latency, high_error_rate, resource_saturation, etc.) |
+| `metric_explorer_tool` | List available metrics, label values, and scrape targets |
 | `alert_rules_tool` | Parse configured alert rules and check firing/pending alerts |
 
 ## Example Questions
@@ -148,11 +199,14 @@ prometheus-ai-agent/
 - "Explain the HighCpuUsage alert rule"
 - "Are any alerts firing right now?"
 - "Correlate CPU, memory, and request latency to find the root cause"
+- "Is there a memory leak? Show memory usage trend over the last hour."
+- "Show disk usage on all instances"
+- "What is the top 5 endpoints by error rate?"
 
 ## Tech Stack
 
 - **Python 3.11+**
-- **LangChain + LangGraph** — ReAct agent framework
+- **LangChain + LangGraph** — ReAct agent and StateGraph planner
 - **Anthropic Claude** — cloud LLM option
 - **Ollama** — local/self-hosted LLM option
 - **Prometheus** — metrics collection
