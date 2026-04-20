@@ -2,216 +2,168 @@
   "summary": {
     "total_cases": 20,
     "errors": 0,
-    "avg_family_coverage": 0.35,
-    "total_hallucinated_tokens": 43,
-    "avg_exec_success_rate": 0.0
+    "avg_family_coverage": 0.97,
+    "total_hallucinated_tokens": 17,
+    "avg_exec_success_rate": 0.9
   },
   "results": [
     {
       "id": "q001",
       "category": "metric_lookup",
       "question": "What is the current HTTP request rate across all endpoints?",
-      "elapsed_seconds": 40.0,
+      "elapsed_seconds": 25.9,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
+        "family_coverage": 1.0,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
         "promql_expressions_found": 2,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "sum(rate(http_requests_total[5m]))",
+            "success": true
           },
           {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "rate(http_requests_total[5m])",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up and running:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, I'l",
+      "response_preview": "The current HTTP request rate across all endpoints is **0.58 requests per second** (averaged over the last 5 minutes).\n\n**PromQL Query Used:**\n```promql\nsum(rate(http_requests_total[5m]))\n```\n\nThis query:\n- Uses `rate(http_requests_total[5m])` to calculate the per-second rate of HTTP requests over a",
       "error": null
     },
     {
       "id": "q002",
       "category": "error_triage",
       "question": "Are there any HTTP 5xx errors in the last 30 minutes?",
-      "elapsed_seconds": 19.5,
+      "elapsed_seconds": 55.6,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "status"
         ],
-        "hallucination_count": 2,
+        "hallucination_count": 1,
         "promql_expressions_found": 2,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[30m]))",
+            "success": true
           },
           {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "sum(increase(http_requests_total{status=~\"5..\"}[30m]))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I'm unable to connect to Prometheus to check for HTTP 5xx errors. This typically means the monitoring stack isn't running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is runnin",
+      "response_preview": "**No HTTP 5xx errors were detected in the last 30 minutes.**\n\nI checked the `http_requests_total` metric (which tracks requests by status code for the `fake-app` service) using two approaches:\n\n1. **Error rate**: `sum(rate(http_requests_total{status=~\"5..\"}[30m]))` = **0** (no 5xx requests per secon",
       "error": null
     },
     {
       "id": "q003",
       "category": "latency_analysis",
       "question": "What is the p95 latency for the /api/search endpoint?",
-      "elapsed_seconds": 4.2,
+      "elapsed_seconds": 22.3,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "endpoint",
+          "search"
         ],
         "hallucination_count": 2,
-        "promql_expressions_found": 2,
+        "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{endpoint=\"/api/search\"}[5m]))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up and running:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, I'l",
+      "response_preview": "## P95 Latency for /api/search Endpoint\n\nBased on the current metrics from Prometheus, here's the p95 latency for the `/api/search` endpoint:\n\n| Method | P95 Latency |\n|--------|-------------|\n| **GET**  | **427 ms** |\n| **POST** | **428 ms** |\n\n### Query Used\n```promql\nhistogram_quantile(0.95, rate",
       "error": null
     },
     {
       "id": "q004",
       "category": "resource_saturation",
       "question": "What is the current CPU usage?",
-      "elapsed_seconds": 4.7,
+      "elapsed_seconds": 12.7,
       "scores": {
         "family_coverage": 1.0,
-        "pattern_match": false,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "instance"
         ],
-        "hallucination_count": 2,
+        "hallucination_count": 1,
         "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the monitoring stack isn't running.\n\n**To fix this, please start the Docker containers:**\n\n```bash\ndocker compose up -d\n```\n\nOnce the containers are running, I'll be able to query CPU usage metrics for you. The typical CPU metrics I'",
+      "response_preview": "## Current CPU Usage\n\n**40.78%** on `node-exporter:9100`\n\n### Query Used\n```promql\n100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)\n```\n\n### Explanation\nThis query calculates CPU usage by:\n1. Taking the rate of idle CPU time over the last 5 minutes\n2. Averaging across al",
       "error": null
     },
     {
       "id": "q005",
       "category": "resource_saturation",
       "question": "How much memory is being used?",
-      "elapsed_seconds": 4.0,
+      "elapsed_seconds": 41.2,
       "scores": {
         "family_coverage": 1.0,
-        "pattern_match": false,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose",
-          "prometheus"
+          "percentage",
+          "memory"
         ],
-        "hallucination_count": 3,
-        "promql_expressions_found": 2,
+        "hallucination_count": 2,
+        "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps\ndocker compose logs prometheus",
+            "expr": "# Total memory\nnode_memory_MemTotal_bytes\n\n# Available memory  \nnode_memory_MemAvailable_bytes\n\n# Memory usage percentage\n100 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100)",
             "success": false
           }
         ],
         "exec_success_rate": 0.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the monitoring stack isn't running.\n\n**Please check that your Docker containers are up:**\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\ndocker compose logs prometheus\n```\n\nOnce Prome",
+      "response_preview": "Based on the current metrics from the node exporter:\n\n**Memory Usage Summary:**\n\n| Metric | Value |\n|--------|-------|\n| **Total Memory** | 8.22 GB (8,216,915,968 bytes) |\n| **Available Memory** | 7.42 GB (7,424,954,368 bytes) |\n| **Used Memory** | ~0.79 GB |\n| **Memory Usage Percentage** | **9.64%*",
       "error": null
     },
     {
       "id": "q006",
       "category": "anomaly_investigation",
       "question": "Are there any anomalies in HTTP error rates over the last hour?",
-      "elapsed_seconds": 6.0,
+      "elapsed_seconds": 27.3,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "status"
         ],
-        "hallucination_count": 2,
-        "promql_expressions_found": 2,
+        "hallucination_count": 1,
+        "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I'm unable to connect to Prometheus at the moment. This typically means the monitoring stack isn't running.\n\n**Please check that your Docker containers are up:**\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nYou should see the `prometheus` cont",
+      "response_preview": "## HTTP Error Rate Anomaly Analysis (Last 60 Minutes)\n\nI analyzed HTTP 5xx error rates across all endpoints using statistical anomaly detection. Here are the findings:\n\n### Summary\n**No anomalies detected.** HTTP error rates have been stable and low over the past hour.\n\n### Detailed Results\n\n| Endpo",
       "error": null
     },
     {
       "id": "q007",
       "category": "alert_explanation",
       "question": "Are any alerts currently firing?",
-      "elapsed_seconds": 3.9,
-      "scores": {
-        "family_coverage": 1.0,
-        "pattern_match": true,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
-        "promql_expressions_found": 2,
-        "execution_results": [
-          {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
-          }
-        ],
-        "exec_success_rate": 0.0
-      },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the Prometheus server is not running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, I can check for f",
-      "error": null
-    },
-    {
-      "id": "q008",
-      "category": "alert_explanation",
-      "question": "Explain all configured alert rules in plain language.",
-      "elapsed_seconds": 12.4,
+      "elapsed_seconds": 27.2,
       "scores": {
         "family_coverage": 1.0,
         "pattern_match": true,
@@ -221,347 +173,312 @@
         "execution_results": [],
         "exec_success_rate": null
       },
-      "response_preview": "# Configured Prometheus Alert Rules - Plain Language Explanation\n\nHere are all the alert rules currently configured in your Prometheus monitoring system:\n\n---\n\n## \ud83d\udd27 Node Alerts (Infrastructure Monitoring)\n\n### 1. **HighCpuUsage** \u26a0\ufe0f Warning\n- **What it checks:** CPU utilization on each server/instan",
+      "response_preview": "## Alert Status Summary\n\n**No alerts are currently firing.** However, there are **15 pending alerts** that should be monitored closely.\n\n### Pending Alerts\n\n| Alert Name | Severity | Instance | Summary | Active Since |\n|------------|----------|----------|---------|--------------|\n| HighErrorRate | w",
+      "error": null
+    },
+    {
+      "id": "q008",
+      "category": "alert_explanation",
+      "question": "Explain all configured alert rules in plain language.",
+      "elapsed_seconds": 12.0,
+      "scores": {
+        "family_coverage": 1.0,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
+        "promql_expressions_found": 0,
+        "execution_results": [],
+        "exec_success_rate": null
+      },
+      "response_preview": "# Configured Alert Rules Explained\n\nHere are all the alert rules configured in your Prometheus instance, explained in plain language:\n\n---\n\n## \ud83d\udda5\ufe0f Node Alerts (Infrastructure)\n\n### 1. **HighCpuUsage** \u26a0\ufe0f Warning\n- **What it monitors:** CPU usage on each server/instance\n- **When it fires:** When CPU u",
       "error": null
     },
     {
       "id": "q009",
       "category": "metric_lookup",
       "question": "What services is Prometheus monitoring right now?",
-      "elapsed_seconds": 4.0,
+      "elapsed_seconds": 9.5,
       "scores": {
         "family_coverage": 1.0,
-        "pattern_match": true,
-        "hallucinated_tokens": [
-          "docker",
-          "compose",
-          "prometheus"
-        ],
-        "hallucination_count": 3,
-        "promql_expressions_found": 2,
-        "execution_results": [
-          {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker ps | grep prometheus",
-            "success": false
-          }
-        ],
-        "exec_success_rate": 0.0
+        "pattern_match": false,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
+        "promql_expressions_found": 0,
+        "execution_results": [],
+        "exec_success_rate": null
       },
-      "response_preview": "I cannot connect to Prometheus right now. This usually means the Prometheus server isn't running.\n\n**Please check that your Docker containers are up:**\n\n```bash\ndocker compose up -d\n```\n\nOr if you're using plain Docker:\n\n```bash\ndocker ps | grep prometheus\n```\n\nOnce Prometheus is running, I'll be ab",
+      "response_preview": "Prometheus is currently monitoring **3 services**, all of which are healthy:\n\n| Service | Instance | Port | Health Status |\n|---------|----------|------|---------------|\n| **fake-app** | fake-app | 8000 | \u2705 Up |\n| **node-exporter** | node-exporter | 9100 | \u2705 Up |\n| **prometheus** | localhost | 9090 ",
       "error": null
     },
     {
       "id": "q010",
       "category": "error_triage",
       "question": "Show me the top 5 endpoints by error rate.",
-      "elapsed_seconds": 3.6,
+      "elapsed_seconds": 49.2,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "status",
+          "endpoint"
         ],
         "hallucination_count": 2,
         "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "topk(5, \n  sum by(endpoint) (rate(http_requests_total{status=~\"4..|5..\"}[5m])) \n  / \n  sum by(endpoint) (rate(http_requests_total[5m])) \n  * 100\n)",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the monitoring stack isn't running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nOnce Prometheus is running, I'll be able to query the error rate metrics and show you the top 5 endpoints by error",
+      "response_preview": "## Top 5 Endpoints by Error Rate\n\nHere are the endpoints with the highest error rates (4xx + 5xx responses) over the last 5 minutes:\n\n| Rank | Endpoint | Error Rate |\n|------|----------|------------|\n| 1 | `/api/search` | **15.79%** |\n| 2 | `/api/users` | **12.96%** |\n| 3 | `/api/products` | **12.48",
       "error": null
     },
     {
       "id": "q011",
       "category": "anomaly_investigation",
       "question": "Is there a memory leak? Show memory usage trend over the last hour.",
-      "elapsed_seconds": 4.1,
+      "elapsed_seconds": 16.9,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
+        "family_coverage": 1.0,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
         "promql_expressions_found": 2,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "100 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100)",
+            "success": true
           },
           {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "process_resident_memory_bytes{job=\"fake-app\"}",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, I'll be able to:\n",
+      "response_preview": "Based on the memory usage data over the last hour, here's what I found:\n\n## Node Memory Usage Trend\n\n**Query used:**\n```promql\n100 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100)\n```\n\n**Results for `node-exporter:9100`:**\n- Memory usage has been **stable** around **9.0% - 9.7%*",
       "error": null
     },
     {
       "id": "q012",
       "category": "error_triage",
       "question": "What is the error rate for the /api/checkout endpoint?",
-      "elapsed_seconds": 4.3,
+      "elapsed_seconds": 16.1,
       "scores": {
-        "family_coverage": 0.0,
+        "family_coverage": 1.0,
         "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
-        "promql_expressions_found": 1,
-        "execution_results": [
-          {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          }
-        ],
-        "exec_success_rate": 0.0
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
+        "promql_expressions_found": 0,
+        "execution_results": [],
+        "exec_success_rate": null
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the Prometheus service is not running or is unreachable.\n\n**Please check that your Docker containers are running:**\n\n```bash\ndocker compose up -d\n```\n\nOnce Prometheus is up and running, I'll be able to:\n1. Search for the correct HTTP",
+      "response_preview": "Based on my search of the Prometheus metrics, I found that the `http_requests_total` metric exists with an `endpoint` label, but **the `/api/checkout` endpoint is not currently being tracked**.\n\nThe available endpoints in your system are:\n- `/api/health`\n- `/api/orders`\n- `/api/products`\n- `/api/sea",
       "error": null
     },
     {
       "id": "q013",
       "category": "incident_investigation",
       "question": "Correlate CPU, memory, and request latency to diagnose any issues.",
-      "elapsed_seconds": 7.0,
+      "elapsed_seconds": 116.8,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "status",
+          "instance"
         ],
         "hallucination_count": 2,
-        "promql_expressions_found": 2,
+        "promql_expressions_found": 6,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "success": true
           },
           {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "success": true
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I'm unable to connect to Prometheus to retrieve your metrics. This typically means the Prometheus service isn't running.\n\n**Please check that your Docker containers are running:**\n\n```bash\ndocker compose up -d\n```\n\nThen verify the containers are healthy:\n\n```bash\ndocker compose ps\n```\n\nYou should se",
+      "response_preview": "## Correlation Analysis: CPU, Memory, and Request Latency\n\nI've gathered metrics for CPU usage, memory usage, request latency, request rate, and error rates over the past 60 minutes. Here's the correlated analysis:\n\n### Key Metrics Queried\n\n**1. CPU Usage (%)**\n```promql\n100 - (avg by(instance)(rate",
       "error": null
     },
     {
       "id": "q014",
       "category": "metric_lookup",
       "question": "Which Prometheus targets are currently down?",
-      "elapsed_seconds": 8.1,
+      "elapsed_seconds": 7.1,
       "scores": {
         "family_coverage": 1.0,
         "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
-        "promql_expressions_found": 2,
-        "execution_results": [
-          {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
-          }
-        ],
-        "exec_success_rate": 0.0
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
+        "promql_expressions_found": 0,
+        "execution_results": [],
+        "exec_success_rate": null
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This typically means the Prometheus service is not running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, I can query th",
+      "response_preview": "Good news! **All Prometheus targets are currently healthy.** Here's the status of each scrape target:\n\n| Job | Instance | Health | Last Scrape | Scrape Duration |\n|-----|----------|--------|-------------|-----------------|\n| fake-app | fake-app:8000 | \u2705 UP | 2026-04-20T03:40:06Z | 14ms |\n| node-expo",
       "error": null
     },
     {
       "id": "q015",
       "category": "metric_lookup",
       "question": "What is the request throughput in requests per second right now?",
-      "elapsed_seconds": 6.7,
+      "elapsed_seconds": 9.4,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose"
+          "status",
+          "endpoint"
         ],
         "hallucination_count": 2,
-        "promql_expressions_found": 2,
+        "promql_expressions_found": 3,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "sum(rate(http_requests_total[5m]))",
+            "success": true
           },
           {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "sum by(endpoint) (rate(http_requests_total[5m]))",
+            "success": true
+          },
+          {
+            "expr": "sum by(status) (rate(http_requests_total[5m]))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up by running:\n\n```bash\ndocker compose up -d\n```\n\nOnce Prometheus is running, I'll be able to query the request throughput metrics for you. You can ver",
+      "response_preview": "## Current Request Throughput\n\n**2.80 requests per second**\n\n### Query Used\n```promql\nsum(rate(http_requests_total[5m]))\n```\n\n### What This Shows\n- This query calculates the per-second rate of HTTP requests across all endpoints, methods, and status codes\n- The `rate()[5m]` function computes the aver",
       "error": null
     },
     {
       "id": "q016",
       "category": "anomaly_investigation",
       "question": "Are there any spikes in response time in the last 30 minutes?",
-      "elapsed_seconds": 3.6,
+      "elapsed_seconds": 53.7,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
+        "family_coverage": 1.0,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
         "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the monitoring stack is not running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nOnce Prometheus is running, I'll be able to analyze response time metrics for spikes in the last 30 minutes. Let ",
+      "response_preview": "## Response Time Spikes Detected in Last 30 Minutes\n\nYes, there are **multiple response time spikes** detected across your application endpoints. Here's what the anomaly analysis of p95 latency (`histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))`) reveals:\n\n### Summary of Anom",
       "error": null
     },
     {
       "id": "q017",
       "category": "error_triage",
       "question": "What percentage of requests are resulting in errors?",
-      "elapsed_seconds": 5.4,
+      "elapsed_seconds": 36.6,
       "scores": {
         "family_coverage": 1.0,
         "pattern_match": true,
         "hallucinated_tokens": [
-          "http_requests_total",
-          "status",
-          "docker",
-          "compose"
+          "status"
         ],
-        "hallucination_count": 4,
-        "promql_expressions_found": 3,
+        "hallucination_count": 1,
+        "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
-          },
-          {
-            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
-            "success": false
+            "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I'm unable to connect to Prometheus at the moment. This typically means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up and running:\n\n```bash\ndocker compose up -d\n```\n\nThen verify the containers are healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is ru",
+      "response_preview": "## Error Rate Analysis\n\n**Current Error Rate: 11.55%**\n\nApproximately **11.55% of all HTTP requests** are resulting in errors (4xx or 5xx status codes).\n\n### PromQL Query Used\n```promql\nsum(rate(http_requests_total{status=~\"4..|5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100\n```\n\n### What Thi",
       "error": null
     },
     {
       "id": "q018",
       "category": "resource_saturation",
       "question": "Show me disk usage on all instances.",
-      "elapsed_seconds": 3.8,
+      "elapsed_seconds": 13.8,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
-        "promql_expressions_found": 2,
+        "family_coverage": 0.5,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
+        "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
-          },
-          {
-            "expr": "bash\ndocker compose ps",
-            "success": false
+            "expr": "100 * (1 - (node_filesystem_free_bytes / node_filesystem_size_bytes))",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the Prometheus service isn't running.\n\nPlease check that your Docker containers are up and running:\n\n```bash\ndocker compose up -d\n```\n\nThen verify the containers are healthy:\n\n```bash\ndocker compose ps\n```\n\nOnce Prometheus is running, ",
+      "response_preview": "Here is the current disk usage across all instances:\n\n## Disk Usage by Instance\n\n| Instance | Mountpoint | Device | Filesystem | Usage % |\n|----------|------------|--------|------------|---------|\n| node-exporter:9100 | /etc/hostname | /dev/vda1 | ext4 | **77.18%** |\n| node-exporter:9100 | /etc/host",
       "error": null
     },
     {
       "id": "q019",
       "category": "anomaly_investigation",
       "question": "Is there a CPU saturation issue? Analyze the last 2 hours.",
-      "elapsed_seconds": 5.6,
+      "elapsed_seconds": 25.7,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
+        "family_coverage": 1.0,
+        "pattern_match": true,
         "hallucinated_tokens": [
-          "docker",
-          "compose",
-          "prometheus"
+          "instance",
+          "saturation",
+          "stable"
         ],
         "hallucination_count": 3,
         "promql_expressions_found": 2,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
+            "expr": "Time        CPU %\n03:32       91.1%  \u2190 Peak saturation\n03:35       31.3%  \u2190 Beginning of drop\n03:42       73.1%  \n03:52       53.2%  \n04:02       33.2%  \n04:12       13.3%  \n04:22        0.4%  \u2190 Now stable at low usage",
             "success": false
           },
           {
-            "expr": "bash\ndocker compose ps\ndocker compose logs prometheus",
-            "success": false
+            "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 0.5
       },
-      "response_preview": "I'm unable to connect to Prometheus at the moment. This typically means the monitoring stack isn't running.\n\n**Please check that your Docker containers are up:**\n\n```bash\ndocker compose up -d\n```\n\nThen verify Prometheus is healthy:\n\n```bash\ndocker compose ps\ndocker compose logs prometheus\n```\n\nOnce ",
+      "response_preview": "## CPU Saturation Analysis (Last 2 Hours)\n\n### Summary\n**Yes, there was a CPU saturation issue, but it has resolved.** The system experienced a significant CPU spike earlier in the window, followed by a dramatic drop to very low utilization.\n\n---\n\n### Key Findings\n\n| Metric | Value | Status |\n|-----",
       "error": null
     },
     {
       "id": "q020",
       "category": "latency_analysis",
       "question": "What is the average request latency per endpoint?",
-      "elapsed_seconds": 3.7,
+      "elapsed_seconds": 27.3,
       "scores": {
-        "family_coverage": 0.0,
-        "pattern_match": false,
-        "hallucinated_tokens": [
-          "docker",
-          "compose"
-        ],
-        "hallucination_count": 2,
+        "family_coverage": 1.0,
+        "pattern_match": true,
+        "hallucinated_tokens": [],
+        "hallucination_count": 0,
         "promql_expressions_found": 1,
         "execution_results": [
           {
-            "expr": "bash\ndocker compose up -d",
-            "success": false
+            "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+            "success": true
           }
         ],
-        "exec_success_rate": 0.0
+        "exec_success_rate": 1.0
       },
-      "response_preview": "I cannot connect to Prometheus at the moment. This usually means the monitoring stack is not running.\n\nPlease check that your Docker containers are up:\n\n```bash\ndocker compose up -d\n```\n\nOnce Prometheus is running, I'll be able to query the request latency metrics and show you the average latency pe",
+      "response_preview": "## Average Request Latency per Endpoint\n\nHere's the current average request latency for each endpoint (calculated over the last 5 minutes):\n\n| Endpoint | Method | Avg Latency |\n|----------|--------|-------------|\n| `/api/search` | GET | **509.6 ms** \u26a0\ufe0f |\n| `/api/search` | POST | 349.0 ms |\n| `/api/h",
       "error": null
     }
   ]
